@@ -1,0 +1,36 @@
+name: validate-opportunity-packs
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify manifest, pack inventory, and checksums
+        run: python -m unittest discover -s tests -v
+      - name: JavaScript processor syntax
+        run: python tests/check_processor_syntax.py
+      - name: Processor stress tests (mock context)
+        run: node tests/stress_processors.js
+      - name: Signed-package fixture cryptography
+        run: node tests/check_test_signature.js
+      - name: Manifest consistency
+        run: python tests/check_manifest.py
